@@ -25,6 +25,18 @@ COPY WorkPlanner.Client/nginx.conf /etc/nginx/conf.d/default.conf
 # Copy published Blazor WASM app
 COPY --from=build /app/publish/wwwroot /usr/share/nginx/html
 
+# Create symlinks for hashed Blazor files (remove hash from filename for clean URLs)
+RUN cd /usr/share/nginx/html/_framework && \
+    for f in blazor.webassembly.*.js; do \
+        [ -f "$f" ] && ln -sf "$f" blazor.webassembly.js; \
+    done && \
+    for f in blazor.webassembly.*.js.br; do \
+        [ -f "$f" ] && ln -sf "$f" blazor.webassembly.js.br; \
+    done && \
+    for f in blazor.webassembly.*.js.gz; do \
+        [ -f "$f" ] && ln -sf "$f" blazor.webassembly.js.gz; \
+    done
+
 # Create config file for API URL (can be overridden at runtime)
 RUN echo '{"ApiBaseUrl":"/api"}' > /usr/share/nginx/html/appsettings.json
 
