@@ -11,11 +11,15 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 // Load configuration from appsettings.json
 builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
 
-// HttpClient with cookies enabled - read BaseAddress from configuration
+// HttpClient with cookies enabled - allow relative /api in Docker/Dev
 var apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? "http://localhost:7191";
+var baseAddress = apiBaseUrl.StartsWith("/")
+    ? new Uri(builder.HostEnvironment.BaseAddress)
+    : new Uri(apiBaseUrl);
+
 builder.Services.AddScoped(sp => new HttpClient
 {
-    BaseAddress = new Uri(apiBaseUrl),
+    BaseAddress = baseAddress,
     DefaultRequestHeaders = { { "Accept", "application/json" } }
 });
 
@@ -26,6 +30,8 @@ builder.Services.AddMudServices();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<TaskService>();
 builder.Services.AddScoped<WorkEntryService>();
+builder.Services.AddScoped<ProjectService>();
+builder.Services.AddScoped<SprintService>();
 
 var app = builder.Build();
 

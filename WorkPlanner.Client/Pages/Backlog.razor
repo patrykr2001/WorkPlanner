@@ -4,4 +4,71 @@
 
 <MudText Typo="Typo.h3" GutterBottom="true">Backlog</MudText>
 
-<MudAlert Severity="Severity.Info">Backlog will be implemented here.</MudAlert>
+<MudStack Spacing="2">
+    <MudSelect T="int" Label="Project" Dense="true" @bind-Value="SelectedProjectId">
+        @if (Projects.Count == 0)
+        {
+            <MudSelectItem T="int" Value="0">No projects available</MudSelectItem>
+        }
+        else
+        {
+            @foreach (var project in Projects)
+            {
+                <MudSelectItem T="int" Value="project.Id">@project.Name</MudSelectItem>
+            }
+        }
+    </MudSelect>
+
+    <MudStack Spacing="2">
+        <MudText Typo="Typo.subtitle1">Backlog</MudText>
+        <MudPaper Class="pa-4" Style="min-height: 120px;"
+                  @ondragover:preventDefault
+                  @ondrop="(() => OnDropToBacklog())">
+            @if (IsUnauthorized)
+            {
+                <MudAlert Severity="Severity.Warning">Login required to view backlog.</MudAlert>
+            }
+            else if (BacklogTasks.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary">No tasks in backlog.</MudText>
+            }
+            else
+            {
+                @foreach (var task in BacklogTasks.OrderBy(t => t.Order))
+                {
+                    <div class="pa-2 mb-2" draggable="true"
+                         @ondragstart="(() => OnDragStart(task))">
+                        <MudText>@task.Title</MudText>
+                    </div>
+                }
+            }
+        </MudPaper>
+
+        @foreach (var sprint in Sprints)
+        {
+            <MudText Typo="Typo.subtitle1">@sprint.Name (@sprint.StartDate.ToString("yyyy-MM-dd") - @sprint.EndDate.ToString("yyyy-MM-dd"))</MudText>
+            <MudPaper Class="pa-4" Style="min-height: 120px;"
+                      @ondragover:preventDefault
+                      @ondrop="(() => OnDropToSprint(sprint.Id))">
+                @if (IsUnauthorized)
+                {
+                    <MudAlert Severity="Severity.Warning">Login required to view sprint tasks.</MudAlert>
+                }
+                else if (!SprintTasks.ContainsKey(sprint.Id) || SprintTasks[sprint.Id].Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">No tasks in this sprint.</MudText>
+                }
+                else
+                {
+                    @foreach (var task in SprintTasks[sprint.Id].OrderBy(t => t.Order))
+                    {
+                        <div class="pa-2 mb-2" draggable="true"
+                             @ondragstart="(() => OnDragStart(task))">
+                            <MudText>@task.Title</MudText>
+                        </div>
+                    }
+                }
+            </MudPaper>
+        }
+    </MudStack>
+</MudStack>

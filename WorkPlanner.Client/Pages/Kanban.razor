@@ -4,4 +4,93 @@
 
 <MudText Typo="Typo.h3" GutterBottom="true">Kanban</MudText>
 
-<MudAlert Severity="Severity.Info">Kanban board will be implemented here.</MudAlert>
+<MudStack Spacing="2">
+    <MudSelect T="int" Label="Project" Dense="true" @bind-Value="SelectedProjectId">
+        @if (Projects.Count == 0)
+        {
+            <MudSelectItem T="int" Value="0">No projects available</MudSelectItem>
+        }
+        else
+        {
+            @foreach (var project in Projects)
+            {
+                <MudSelectItem T="int" Value="project.Id">@project.Name</MudSelectItem>
+            }
+        }
+    </MudSelect>
+
+    <MudSelect T="int" Label="Sprint" Dense="true" @bind-Value="SelectedSprintId" Disabled="Sprints.Count == 0">
+        @if (Sprints.Count == 0)
+        {
+            <MudSelectItem T="int" Value="0">No sprints available</MudSelectItem>
+        }
+        else
+        {
+            @foreach (var sprint in Sprints)
+            {
+                <MudSelectItem T="int" Value="sprint.Id">@sprint.Name</MudSelectItem>
+            }
+        }
+    </MudSelect>
+
+    <MudStack Spacing="2">
+        <MudText Typo="Typo.subtitle1">Sprint tasks</MudText>
+        <MudPaper Class="pa-4" Style="min-height: 120px;">
+            @if (IsUnauthorized)
+            {
+                <MudAlert Severity="Severity.Warning">Login required to view sprint tasks.</MudAlert>
+            }
+            else if (SprintTasks.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary">No tasks in this sprint.</MudText>
+            }
+            else
+            {
+                <MudGrid>
+                    <MudItem xs="12" md="4">
+                        <MudText Typo="Typo.subtitle2">Todo</MudText>
+                        <MudPaper Class="pa-3" Style="min-height: 140px;"
+                                  @ondragover:preventDefault
+                                  @ondrop="(() => OnDropToColumn(WorkPlanner.Client.Models.TaskStatus.Todo))">
+                            @foreach (var task in SprintTasks.Where(t => t.Status == WorkPlanner.Client.Models.TaskStatus.Todo).OrderBy(t => t.Order))
+                            {
+                                <div class="pa-2 mb-2" draggable="true"
+                                     @ondragstart="(() => OnDragStart(task))">
+                                    <MudText>@task.Title</MudText>
+                                </div>
+                            }
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" md="4">
+                        <MudText Typo="Typo.subtitle2">In Progress</MudText>
+                        <MudPaper Class="pa-3" Style="min-height: 140px;"
+                                  @ondragover:preventDefault
+                                  @ondrop="(() => OnDropToColumn(WorkPlanner.Client.Models.TaskStatus.InProgress))">
+                            @foreach (var task in SprintTasks.Where(t => t.Status == WorkPlanner.Client.Models.TaskStatus.InProgress).OrderBy(t => t.Order))
+                            {
+                                <div class="pa-2 mb-2" draggable="true"
+                                     @ondragstart="(() => OnDragStart(task))">
+                                    <MudText>@task.Title</MudText>
+                                </div>
+                            }
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" md="4">
+                        <MudText Typo="Typo.subtitle2">Done</MudText>
+                        <MudPaper Class="pa-3" Style="min-height: 140px;"
+                                  @ondragover:preventDefault
+                                  @ondrop="(() => OnDropToColumn(WorkPlanner.Client.Models.TaskStatus.Done))">
+                            @foreach (var task in SprintTasks.Where(t => t.Status == WorkPlanner.Client.Models.TaskStatus.Done).OrderBy(t => t.Order))
+                            {
+                                <div class="pa-2 mb-2" draggable="true"
+                                     @ondragstart="(() => OnDragStart(task))">
+                                    <MudText>@task.Title</MudText>
+                                </div>
+                            }
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
+            }
+        </MudPaper>
+    </MudStack>
+</MudStack>
