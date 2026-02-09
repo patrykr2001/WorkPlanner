@@ -1,0 +1,155 @@
+@using MudBlazor.Utilities
+@inherits LayoutComponentBase
+@inject AuthService AuthService
+@inject IDialogService DialogService
+@inject NavigationManager NavigationManager
+
+<MudThemeProvider @ref="_themeProvider" @bind-IsDarkMode="_isDarkMode" Theme="_theme" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="1">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+        <MudText Typo="Typo.h6" Class="ml-3">WorkSummary</MudText>
+        <MudSpacer />
+        
+        <!-- Theme Toggle -->
+        <MudTooltip Text="@(_isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode")">
+            <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)" 
+                          Color="Color.Inherit" 
+                          OnClick="ToggleTheme" />
+        </MudTooltip>
+        
+        <!-- User Menu -->
+        @if (AuthService.IsAuthenticated)
+        {
+            <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+                <ActivatorContent>
+                    <MudChip T="string" Icon="@Icons.Material.Filled.Person" Color="Color.Primary" Class="ml-2">
+                        @AuthService.CurrentUser?.FirstName
+                    </MudChip>
+                </ActivatorContent>
+                <ChildContent>
+                    <MudMenuItem Disabled="true">
+                        <MudText Typo="Typo.body2">@AuthService.CurrentUser?.FullName</MudText>
+                        <MudText Typo="Typo.caption">@AuthService.CurrentUser?.Email</MudText>
+                    </MudMenuItem>
+                    <MudDivider />
+                    @if (AuthService.CurrentUser?.IsAdmin == true)
+                    {
+                        <MudMenuItem Icon="@Icons.Material.Filled.AdminPanelSettings">
+                            Admin Panel
+                        </MudMenuItem>
+                    }
+                    <MudMenuItem Icon="@Icons.Material.Filled.Person">Profile</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Filled.Settings">Settings</MudMenuItem>
+                    <MudDivider />
+                    <MudMenuItem Icon="@Icons.Material.Filled.Logout" OnClick="Logout">Logout</MudMenuItem>
+                </ChildContent>
+            </MudMenu>
+        }
+        else
+        {
+            <MudButton Variant="Variant.Text" Color="Color.Inherit" OnClick="OpenLoginDialog" Class="ml-2">Login</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Inherit" OnClick="OpenRegisterDialog" Class="ml-2">Register</MudButton>
+        }
+    </MudAppBar>
+    
+    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
+        <MudNavMenu>
+            <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
+            <MudNavLink Href="tasks" Icon="@Icons.Material.Filled.Task">Tasks</MudNavLink>
+            <MudNavLink Href="timer" Icon="@Icons.Material.Filled.Timer">Timer</MudNavLink>
+            <MudNavLink Href="reports" Icon="@Icons.Material.Filled.Assessment">Reports</MudNavLink>
+        </MudNavMenu>
+    </MudDrawer>
+    
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pt-4">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private bool _drawerOpen = true;
+    private bool _isDarkMode;
+    private MudThemeProvider _themeProvider = null!;
+
+    private readonly MudTheme _theme = new()
+    {
+        PaletteLight = new PaletteLight
+        {
+            Primary = Colors.Blue.Default,
+            Secondary = Colors.Green.Default,
+            AppbarBackground = Colors.Blue.Default,
+        },
+        PaletteDark = new PaletteDark
+        {
+            Primary = Colors.Blue.Lighten1,
+            Secondary = Colors.Green.Lighten1,
+            AppbarBackground = Colors.Gray.Darken3,
+        }
+    };
+
+    protected override void OnInitialized()
+    {
+        AuthService.OnAuthStateChanged += StateHasChanged;
+    }
+
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Theme preference can be loaded from localStorage here if needed
+            StateHasChanged();
+        }
+        return Task.CompletedTask;
+    }
+
+    private void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+
+    private void ToggleTheme()
+    {
+        _isDarkMode = !_isDarkMode;
+    }
+
+    private async Task OpenLoginDialog()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<LoginDialog>("Login", options);
+        var result = await dialog.Result;
+        
+        if (result is { Canceled: false })
+        {
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenRegisterDialog()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<RegisterDialog>("Register", options);
+        var result = await dialog.Result;
+        
+        if (result is { Canceled: false })
+        {
+            StateHasChanged();
+        }
+    }
+
+    private async Task Logout()
+    {
+        await AuthService.LogoutAsync();
+        NavigationManager.NavigateTo("/");
+    }
+
+    public void Dispose()
+    {
+        AuthService.OnAuthStateChanged -= StateHasChanged;
+    }
+}

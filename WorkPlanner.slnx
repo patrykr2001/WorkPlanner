@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="WorkPlanner.Api/WorkPlanner.Api.csproj" />
+  <Project Path="WorkPlanner.Client/WorkPlanner.Client.csproj" />
+</Solution>

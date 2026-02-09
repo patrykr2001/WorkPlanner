@@ -1,0 +1,60 @@
+@inject AuthService AuthService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" @bind-IsValid="_isValid">
+            <MudTextField @bind-Value="_email" 
+                         Label="Email" 
+                         Required="true" 
+                         RequiredError="Email is required"
+                         InputType="InputType.Email"
+                         Validation="new[] { new EmailAddressAttribute() }" />
+            
+            <MudTextField @bind-Value="_password" 
+                         Label="Password" 
+                         Required="true" 
+                         RequiredError="Password is required"
+                         InputType="InputType.Password" />
+            
+            <MudCheckBox @bind-Value="_rememberMe" 
+                        Label="Remember me" 
+                        Color="Color.Primary" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit" Disabled="!_isValid">Login</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    private MudForm _form = null!;
+    private bool _isValid;
+    private string _email = "";
+    private string _password = "";
+    private bool _rememberMe = true;
+
+    private async Task Submit()
+    {
+        var success = await AuthService.LoginAsync(_email, _password, _rememberMe);
+        
+        if (success)
+        {
+            Snackbar.Add("Login successful!", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        else
+        {
+            Snackbar.Add("Invalid email or password", Severity.Error);
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+}

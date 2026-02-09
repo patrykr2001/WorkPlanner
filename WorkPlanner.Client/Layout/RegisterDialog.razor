@@ -1,0 +1,118 @@
+@inject AuthService AuthService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" @bind-IsValid="_isValid">
+            <MudGrid>
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="_firstName" 
+                                 Label="First Name" 
+                                 Required="true" 
+                                 RequiredError="First name is required" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="_lastName" 
+                                 Label="Last Name" 
+                                 Required="true" 
+                                 RequiredError="Last name is required" />
+                </MudItem>
+            </MudGrid>
+            
+            <MudTextField @bind-Value="_email" 
+                         Label="Email" 
+                         Required="true" 
+                         RequiredError="Email is required"
+                         InputType="InputType.Email"
+                         Validation="@(new EmailAddressAttribute(){ErrorMessage = "Invalid email address"})" 
+                         Class="mt-4" />
+            
+            <MudTextField @bind-Value="_password" 
+                         Label="Password" 
+                         Required="true" 
+                         RequiredError="Password is required"
+                         InputType="InputType.Password"
+                         Class="mt-4" />
+            
+            <MudTextField @bind-Value="_confirmPassword" 
+                         Label="Confirm Password" 
+                         Required="true" 
+                         RequiredError="Please confirm your password"
+                         InputType="InputType.Password"
+                         Class="mt-4" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit" Disabled="!_isValid">Register</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    private MudForm _form = null!;
+    private bool _isValid;
+    private string _firstName = "";
+    private string _lastName = "";
+    private string _email = "";
+    private string _password = "";
+    private string _confirmPassword = "";
+
+    private async Task Submit()
+    {
+        // Validate password manually
+        if (_password.Length < 8)
+        {
+            Snackbar.Add("Password must be at least 8 characters", Severity.Error);
+            return;
+        }
+        if (!_password.Any(char.IsUpper))
+        {
+            Snackbar.Add("Password must contain at least one uppercase letter", Severity.Error);
+            return;
+        }
+        if (!_password.Any(char.IsLower))
+        {
+            Snackbar.Add("Password must contain at least one lowercase letter", Severity.Error);
+            return;
+        }
+        if (!_password.Any(char.IsDigit))
+        {
+            Snackbar.Add("Password must contain at least one digit", Severity.Error);
+            return;
+        }
+        if (_password != _confirmPassword)
+        {
+            Snackbar.Add("Passwords do not match", Severity.Error);
+            return;
+        }
+
+        var model = new RegisterModel
+        {
+            FirstName = _firstName,
+            LastName = _lastName,
+            Email = _email,
+            Password = _password,
+            ConfirmPassword = _confirmPassword
+        };
+
+        var success = await AuthService.RegisterAsync(model);
+        
+        if (success)
+        {
+            Snackbar.Add("Registration successful!", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        else
+        {
+            Snackbar.Add("Registration failed. Email may already be in use.", Severity.Error);
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+}
