@@ -97,7 +97,7 @@ using (var scope = app.Services.CreateScope())
     var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
     var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
     
-    context.Database.EnsureCreated();
+    await context.Database.MigrateAsync();
     
     // Seed roles
     if (!await roleManager.RoleExistsAsync(Roles.Admin))
