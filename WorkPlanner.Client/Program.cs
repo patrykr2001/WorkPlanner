@@ -32,6 +32,7 @@ builder.Services.AddScoped<TaskService>();
 builder.Services.AddScoped<WorkEntryService>();
 builder.Services.AddScoped<ProjectService>();
 builder.Services.AddScoped<SprintService>();
+builder.Services.AddScoped<UserService>();
 
 var app = builder.Build();
 

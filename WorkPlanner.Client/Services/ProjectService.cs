@@ -40,4 +40,33 @@ public class ProjectService
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<Project>() ?? new Project();
     }
+
+    public async Task UpdateProjectAsync(int id, UpdateProjectRequest request)
+    {
+        var response = await _httpClient.PutAsJsonAsync($"api/projects/{id}", request);
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task<List<ProjectMember>> GetMembersAsync(int projectId)
+    {
+        var response = await _httpClient.GetAsync($"api/projects/{projectId}/members");
+        if (!response.IsSuccessStatusCode)
+        {
+            return new List<ProjectMember>();
+        }
+
+        return await response.Content.ReadFromJsonAsync<List<ProjectMember>>() ?? new List<ProjectMember>();
+    }
+
+    public async Task AddMemberAsync(int projectId, AddProjectMemberRequest request)
+    {
+        var response = await _httpClient.PostAsJsonAsync($"api/projects/{projectId}/members", request);
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task RemoveMemberAsync(int projectId, string userId)
+    {
+        var response = await _httpClient.DeleteAsync($"api/projects/{projectId}/members/{userId}");
+        response.EnsureSuccessStatusCode();
+    }
 }
