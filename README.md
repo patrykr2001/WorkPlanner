@@ -1,4 +1,4 @@
-# WorkPlanner - Work time tracking app
+# WorkPulse - Work time tracking app
 
 App for tracking time, tasks, and generating work summaries.
 
@@ -8,7 +8,7 @@ App for tracking time, tasks, and generating work summaries.
 
 ## Project structure
 ```
-WorkPlanner/
+WorkPulse/
 ├── WorkPlanner.Api/           # ASP.NET Core Web API
 │   ├── Controllers/           # API controllers
 │   ├── Data/                  # DbContext
