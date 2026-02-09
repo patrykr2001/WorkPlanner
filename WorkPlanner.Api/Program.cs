@@ -32,11 +32,12 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.HttpOnly = true;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    // Use SecurePolicy.None in container (behind reverse proxy), Always for local dev
+    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() ? CookieSecurePolicy.Always : CookieSecurePolicy.None;
     options.Cookie.SameSite = SameSiteMode.None; // Required for cross-origin WASM
     options.ExpireTimeSpan = TimeSpan.FromDays(7);
     options.SlidingExpiration = true;
-    
+
     // API endpoints should return 401 instead of redirecting
     options.Events.OnRedirectToLogin = context =>
     {
@@ -54,11 +55,15 @@ builder.Services.AddAuthentication();
 builder.Services.AddAuthorization();
 
 // Add CORS for Blazor WASM client (must allow credentials for cookies)
+// Read origins from configuration (supports multiple origins via CORS__Origins__X env vars)
+var corsOrigins = builder.Configuration.GetSection("CORS:Origins").Get<string[]>() 
+    ?? new[] { "https://localhost:7127", "http://localhost:5027" };
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowBlazorClient", policy =>
     {
-        policy.WithOrigins("https://localhost:7127", "http://localhost:5027")
+        policy.WithOrigins(corsOrigins)
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials(); // Important for cookie auth
@@ -73,13 +78,16 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
 app.UseCors("AllowBlazorClient");
+app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Health check endpoint for Docker
+app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
 
 // Ensure database is created and seed default admin
 using (var scope = app.Services.CreateScope())
