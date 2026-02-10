@@ -432,3 +432,4 @@ AI_Guidelines.md
 *.db-journal
 *.sqlite
 *.sqlite3
+data/
