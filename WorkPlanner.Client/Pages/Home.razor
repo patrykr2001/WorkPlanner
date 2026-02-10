@@ -1,4 +1,5 @@
 @page "/"
+@inject AuthService AuthService
 
 <PageTitle>WorkPulse - Home</PageTitle>
 
@@ -9,26 +10,29 @@
 </MudText>
 
 <MudGrid>
-    <MudItem xs="12" md="4">
-        <MudCard Elevation="2" Class="pa-4">
-            <MudCardHeader>
-                <CardHeaderAvatar>
-                    <MudAvatar Color="Color.Primary">
-                        <MudIcon Icon="@Icons.Material.Filled.Task" />
-                    </MudAvatar>
-                </CardHeaderAvatar>
-                <CardHeaderContent>
-                    <MudText Typo="Typo.h6">Tasks</MudText>
-                </CardHeaderContent>
-            </MudCardHeader>
-            <MudCardContent>
-                <MudText>Manage your tasks and track their progress.</MudText>
-            </MudCardContent>
-            <MudCardActions>
-                <MudButton Variant="Variant.Text" Color="Color.Primary" Href="tasks">View Tasks</MudButton>
-            </MudCardActions>
-        </MudCard>
-    </MudItem>
+    @if (AuthService.IsAuthenticated)
+    {
+        <MudItem xs="12" md="4">
+            <MudCard Elevation="2" Class="pa-4">
+                <MudCardHeader>
+                    <CardHeaderAvatar>
+                        <MudAvatar Color="Color.Primary">
+                            <MudIcon Icon="@Icons.Material.Filled.Task" />
+                        </MudAvatar>
+                    </CardHeaderAvatar>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Tasks</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudText>Manage your tasks and track their progress.</MudText>
+                </MudCardContent>
+                <MudCardActions>
+                    <MudButton Variant="Variant.Text" Color="Color.Primary" Href="tasks">View Tasks</MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
+    }
     
     <MudItem xs="12" md="4">
         <MudCard Elevation="2" Class="pa-4">
@@ -51,24 +55,27 @@
         </MudCard>
     </MudItem>
     
-    <MudItem xs="12" md="4">
-        <MudCard Elevation="2" Class="pa-4">
-            <MudCardHeader>
-                <CardHeaderAvatar>
-                    <MudAvatar Color="Color.Tertiary">
-                        <MudIcon Icon="@Icons.Material.Filled.Assessment" />
-                    </MudAvatar>
-                </CardHeaderAvatar>
-                <CardHeaderContent>
-                    <MudText Typo="Typo.h6">Reports</MudText>
-                </CardHeaderContent>
-            </MudCardHeader>
-            <MudCardContent>
-                <MudText>Generate daily and weekly work summaries.</MudText>
-            </MudCardContent>
-            <MudCardActions>
-                <MudButton Variant="Variant.Text" Color="Color.Primary" Href="reports">View Reports</MudButton>
-            </MudCardActions>
-        </MudCard>
-    </MudItem>
+    @if (AuthService.IsAuthenticated)
+    {
+        <MudItem xs="12" md="4">
+            <MudCard Elevation="2" Class="pa-4">
+                <MudCardHeader>
+                    <CardHeaderAvatar>
+                        <MudAvatar Color="Color.Tertiary">
+                            <MudIcon Icon="@Icons.Material.Filled.Assessment" />
+                        </MudAvatar>
+                    </CardHeaderAvatar>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Reports</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudText>Generate daily and weekly work summaries.</MudText>
+                </MudCardContent>
+                <MudCardActions>
+                    <MudButton Variant="Variant.Text" Color="Color.Primary" Href="reports">View Reports</MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
+    }
 </MudGrid>

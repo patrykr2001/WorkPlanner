@@ -16,8 +16,10 @@ public class TaskItem
 
 public enum TaskStatus
 {
-    Backlog,
-    Todo,
-    InProgress,
-    Done
+    Backlog = 0,
+    Todo = 1,
+    InProgress = 2,
+    Done = 3,
+    Review = 4,
+    Refine = 5
 }

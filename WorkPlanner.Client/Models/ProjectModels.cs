@@ -7,17 +7,20 @@ public class Project
     public string OwnerId { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public bool IsArchived { get; set; }
+    public string? EnabledStatuses { get; set; }
 }
 
 public class CreateProjectRequest
 {
     public string Name { get; set; } = string.Empty;
+    public string? EnabledStatuses { get; set; }
 }
 
 public class UpdateProjectRequest
 {
     public string Name { get; set; } = string.Empty;
     public bool IsArchived { get; set; }
+    public string? EnabledStatuses { get; set; }
 }
 
 public class ProjectMember

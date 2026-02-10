@@ -25,7 +25,7 @@
         <MudSelectItem T="string" Value="@AssigneeFilterUnassigned">Unassigned</MudSelectItem>
         @foreach (var member in Members)
         {
-            <MudSelectItem T="string" Value="member.UserId">@member.FullName</MudSelectItem>
+            <MudSelectItem T="string" Value="member.UserId">@GetMemberLabel(member)</MudSelectItem>
         }
     </MudSelect>
 

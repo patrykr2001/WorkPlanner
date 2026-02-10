@@ -24,7 +24,7 @@
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" OnClick="Submit" Disabled="!_isValid">Login</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit" Disabled="_isSubmitting">Login</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -34,13 +34,27 @@
 
     private MudForm _form = null!;
     private bool _isValid;
+    private bool _isSubmitting;
     private string _email = "";
     private string _password = "";
     private bool _rememberMe = true;
 
     private async Task Submit()
     {
+        if (_isSubmitting)
+        {
+            return;
+        }
+
+        await _form.Validate();
+        if (!_isValid)
+        {
+            return;
+        }
+
+        _isSubmitting = true;
         var success = await AuthService.LoginAsync(_email, _password, _rememberMe);
+        _isSubmitting = false;
         
         if (success)
         {

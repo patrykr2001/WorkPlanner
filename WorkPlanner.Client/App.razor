@@ -1,7 +1,19 @@
+@inject AuthService AuthService
+@inject NavigationManager NavigationManager
+
+@using System.Reflection
+
 <Router AppAssembly="@typeof(App).Assembly">
     <Found Context="routeData">
-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)"/>
-        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+        @if (ShouldBlockAnonymous(routeData.PageType))
+        {
+            <RedirectToHome />
+        }
+        else
+        {
+            <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)"/>
+            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+        }
     </Found>
     <NotFound>
         <PageTitle>Not found</PageTitle>
@@ -11,3 +23,37 @@
         </LayoutView>
     </NotFound>
 </Router>
+
+@code
+{
+    private static readonly HashSet<string> AnonymousAllowedRoutes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "/",
+        "/timer"
+    };
+
+    private bool ShouldBlockAnonymous(Type? pageType)
+    {
+        if (AuthService.IsAuthenticated)
+        {
+            return false;
+        }
+
+        if (pageType == null)
+        {
+            return false;
+        }
+
+        var routeAttributes = pageType.GetCustomAttributes(typeof(RouteAttribute), inherit: true)
+            .OfType<RouteAttribute>()
+            .Select(attr => attr.Template)
+            .ToList();
+
+        if (routeAttributes.Count == 0)
+        {
+            return false;
+        }
+
+        return routeAttributes.All(route => !AnonymousAllowedRoutes.Contains("/" + route.Trim('/')));
+    }
+}

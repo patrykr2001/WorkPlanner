@@ -1,20 +1,20 @@
-@namespace WorkPlanner.Client.Shared
 @using WorkPlanner.Client.Models
 @using WorkPlanner.Client.Services
+@using Microsoft.AspNetCore.Components
 @using MudBlazor
-@using TaskStatus = WorkPlanner.Client.Models.TaskStatus;
-@inject ProjectService ProjectService
-@inject SprintService SprintService
-@inject TaskService TaskService
-@inject AuthService AuthService
+@inject ProjectService ProjectDataService
+@inject SprintService SprintDataService
+@inject TaskService TaskDataService
+@inject AuthService AuthStateService
+@inject TaskCommentService CommentDataService
 
 <MudDialog>
     <DialogContent>
         <MudStack Spacing="2">
             <MudText Typo="Typo.h6">@DialogTitle</MudText>
 
-            <MudTextField @bind-Value="Model.Title" Label="Title" Required="true" />
-            <MudTextField @bind-Value="Model.Description" Label="Description" Lines="3" />
+            <MudTextField @bind-Value="TaskModel.Title" Label="Title" Required="true" />
+            <MudTextField @bind-Value="TaskModel.Description" Label="Description" Lines="10" />
 
             <MudSelect T="int" Label="Project" @bind-Value="SelectedProjectId">
                 @foreach (var project in Projects)
@@ -23,7 +23,7 @@
                 }
             </MudSelect>
 
-            <MudSelect T="int" Label="Sprint" @bind-Value="SelectedSprintId">
+            <MudSelect T="int" Label="Sprint" @bind-Value="SelectedSprintId" @bind-Value:after="OnSprintChanged">
                 <MudSelectItem T="int" Value="0">Backlog</MudSelectItem>
                 @foreach (var sprint in Sprints)
                 {
@@ -31,21 +31,47 @@
                 }
             </MudSelect>
 
-            <MudSelect T="TaskStatus" Label="Status" @bind-Value="Model.Status">
-                <MudSelectItem T="TaskStatus" Value="TaskStatus.Backlog">Backlog</MudSelectItem>
-                <MudSelectItem T="TaskStatus" Value="TaskStatus.Todo">Todo</MudSelectItem>
-                <MudSelectItem T="TaskStatus" Value="TaskStatus.InProgress">In Progress</MudSelectItem>
-                <MudSelectItem T="TaskStatus" Value="TaskStatus.Done">Done</MudSelectItem>
+            <MudSelect T="WorkPlanner.Client.Models.TaskStatus" Label="Status" @bind-Value="TaskModel.Status">
+                @foreach (var status in AvailableStatuses)
+                {
+                    <MudSelectItem T="WorkPlanner.Client.Models.TaskStatus" Value="status">@GetStatusLabel(status)</MudSelectItem>
+                }
             </MudSelect>
 
-            <MudSelect T="string" Label="Assignee" @bind-Value="Model.AssigneeId">
+            <MudSelect T="string" Label="Assignee" @bind-Value="TaskModel.AssigneeId">
                 <MudSelectItem T="string" Value="@string.Empty">Unassigned</MudSelectItem>
                 @foreach (var member in Members)
                 {
-                    <MudSelectItem T="string" Value="member.UserId">@member.FullName</MudSelectItem>
+                    <MudSelectItem T="string" Value="member.UserId">@GetMemberLabel(member)</MudSelectItem>
                 }
             </MudSelect>
         </MudStack>
+
+        @if (InitialTask != null)
+        {
+            <MudDivider Class="my-2" />
+            <MudText Typo="Typo.subtitle1" Class="mb-2">Comments</MudText>
+            <MudStack Spacing="2">
+                @if (Comments.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">No comments yet.</MudText>
+                }
+                else
+                {
+                    @foreach (var comment in Comments)
+                    {
+                        <MudPaper Class="pa-3">
+                            <MudText Typo="Typo.subtitle2">@GetCommentAuthorLabel(comment)</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@comment.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</MudText>
+                            <MudText Typo="Typo.body2" Class="mt-2">@comment.Body</MudText>
+                        </MudPaper>
+                    }
+                }
+
+                <MudTextField @bind-Value="NewCommentBody" Label="Add a comment" Lines="4" />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@string.IsNullOrWhiteSpace(NewCommentBody)" OnClick="AddComment">Add comment</MudButton>
+            </MudStack>
+        }
     </DialogContent>
     <DialogActions>
         <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="Cancel">Cancel</MudButton>
@@ -54,115 +80,137 @@
 </MudDialog>
 
 @code {
-    public const string DialogTitleKey = "Task";
-    [Parameter] public TaskItem? Task { get; set; }
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public TaskItem? InitialTask { get; set; }
 
-    private TaskItem Model { get; set; } = new();
-    private string DialogTitle => Task == null ? "New task" : "Edit task";
+    private TaskItem TaskModel { get; set; } = new();
+    private string DialogTitle => InitialTask == null ? "New task" : "Edit task";
 
     private List<Project> Projects { get; set; } = new();
     private List<Sprint> Sprints { get; set; } = new();
     private List<ProjectMember> Members { get; set; } = new();
+    private List<Models.TaskStatus> AvailableStatuses { get; set; } = new();
+    private List<TaskComment> Comments { get; set; } = new();
+    private string NewCommentBody { get; set; } = string.Empty;
 
     private int SelectedProjectId
     {
-        get => Model.ProjectId;
+        get => TaskModel.ProjectId;
         set
         {
-            if (Model.ProjectId == value)
+            if (TaskModel.ProjectId == value)
             {
                 return;
             }
 
-            Model.ProjectId = value;
+            TaskModel.ProjectId = value;
             _ = LoadProjectDataAsync();
         }
     }
 
     private int SelectedSprintId
     {
-        get => Model.SprintId ?? 0;
+        get => TaskModel.SprintId ?? 0;
         set
         {
-            Model.SprintId = value == 0 ? null : value;
-            if (Model.SprintId == null)
+            TaskModel.SprintId = value == 0 ? null : value;
+            if (TaskModel.SprintId == null)
             {
-                Model.Status = TaskStatus.Backlog;
+                TaskModel.Status = Models.TaskStatus.Backlog;
             }
         }
     }
 
     protected override async Task OnInitializedAsync()
     {
-        Projects = await ProjectService.GetProjectsAsync();
+        Projects = await ProjectDataService.GetProjectsAsync();
 
-        if (Task != null)
+        if (InitialTask != null)
         {
-            Model = new TaskItem
+            TaskModel = new TaskItem
             {
-                Id = Task.Id,
-                ProjectId = Task.ProjectId,
-                Title = Task.Title,
-                Description = Task.Description,
-                Status = Task.Status,
-                CreatedAt = Task.CreatedAt,
-                CompletedAt = Task.CompletedAt,
-                AssigneeId = Task.AssigneeId,
-                SprintId = Task.SprintId,
-                Order = Task.Order
+                Id = InitialTask.Id,
+                ProjectId = InitialTask.ProjectId,
+                Title = InitialTask.Title,
+                Description = InitialTask.Description,
+                Status = InitialTask.Status,
+                CreatedAt = InitialTask.CreatedAt,
+                CompletedAt = InitialTask.CompletedAt,
+                AssigneeId = InitialTask.AssigneeId,
+                SprintId = InitialTask.SprintId,
+                Order = InitialTask.Order
             };
         }
         else if (Projects.Count > 0)
         {
-            Model.ProjectId = Projects[0].Id;
+            TaskModel.ProjectId = Projects[0].Id;
         }
 
         await LoadProjectDataAsync();
 
-        if (string.IsNullOrWhiteSpace(Model.AssigneeId))
+        if (string.IsNullOrWhiteSpace(TaskModel.AssigneeId))
         {
-            Model.AssigneeId = AuthService.CurrentUser?.Id;
+            TaskModel.AssigneeId = AuthStateService.CurrentUser?.Id;
+        }
+
+        if (InitialTask != null)
+        {
+            Comments = await CommentDataService.GetCommentsAsync(InitialTask.Id);
         }
     }
 
     private async Task LoadProjectDataAsync()
     {
-        if (Model.ProjectId <= 0)
+        if (TaskModel.ProjectId <= 0)
         {
             Sprints = new List<Sprint>();
             Members = new List<ProjectMember>();
+            AvailableStatuses = new List<Models.TaskStatus> { Models.TaskStatus.Backlog };
             return;
         }
 
-        Sprints = await SprintService.GetSprintsAsync(Model.ProjectId, includeArchived: false);
-        Members = await ProjectService.GetMembersAsync(Model.ProjectId);
+        Sprints = await SprintDataService.GetSprintsAsync(TaskModel.ProjectId, includeArchived: false);
+        Members = await ProjectDataService.GetMembersAsync(TaskModel.ProjectId);
+        var project = Projects.FirstOrDefault(p => p.Id == TaskModel.ProjectId);
+        AvailableStatuses = TaskModel.SprintId == null
+            ? new List<Models.TaskStatus> { Models.TaskStatus.Backlog }
+            : GetAvailableStatuses(project?.EnabledStatuses);
 
-        if (Model.SprintId.HasValue && Sprints.All(s => s.Id != Model.SprintId.Value))
+        if (TaskModel.SprintId.HasValue && Sprints.All(s => s.Id != TaskModel.SprintId.Value))
         {
-            Model.SprintId = null;
-            Model.Status = TaskStatus.Backlog;
+            TaskModel.SprintId = null;
+            TaskModel.Status = Models.TaskStatus.Backlog;
+        }
+
+        if (TaskModel.SprintId != null && TaskModel.Status == Models.TaskStatus.Backlog && AvailableStatuses.Count > 0)
+        {
+            TaskModel.Status = AvailableStatuses[0];
+        }
+        else if (TaskModel.SprintId == null && TaskModel.Status != Models.TaskStatus.Backlog)
+        {
+            TaskModel.Status = Models.TaskStatus.Backlog;
         }
     }
 
     private async Task Save()
     {
-        if (string.IsNullOrWhiteSpace(Model.Title) || Model.ProjectId <= 0)
+        if (string.IsNullOrWhiteSpace(TaskModel.Title) || TaskModel.ProjectId <= 0)
         {
             return;
         }
 
-        if (Model.SprintId == null)
+        if (TaskModel.SprintId == null)
         {
-            Model.Status = TaskStatus.Backlog;
+            TaskModel.Status = Models.TaskStatus.Backlog;
         }
 
-        if (Task == null)
+        if (InitialTask == null)
         {
-            await TaskService.CreateTaskAsync(Model);
+            await TaskDataService.CreateTaskAsync(TaskModel);
         }
         else
         {
-            await TaskService.UpdateTaskAsync(Model);
+            await TaskDataService.UpdateTaskAsync(TaskModel);
         }
 
         MudDialog.Close(DialogResult.Ok(true));
@@ -171,5 +219,105 @@
     private void Cancel()
     {
         MudDialog.Cancel();
+    }
+
+    private async Task OnSprintChanged()
+    {
+        await LoadProjectDataAsync();
+    }
+
+    private string GetMemberLabel(ProjectMember member)
+    {
+        if (!string.IsNullOrWhiteSpace(member.FullName))
+        {
+            return member.FullName;
+        }
+
+        return string.IsNullOrWhiteSpace(member.Email) ? member.UserId : member.Email;
+    }
+
+    private string GetCommentAuthorLabel(TaskComment comment)
+    {
+        if (!string.IsNullOrWhiteSpace(comment.AuthorName))
+        {
+            return comment.AuthorName;
+        }
+
+        return string.IsNullOrWhiteSpace(comment.AuthorEmail) ? comment.AuthorId : comment.AuthorEmail;
+    }
+
+    private static List<Models.TaskStatus> GetAvailableStatuses(string? enabledStatuses)
+    {
+        var defaultStatuses = new List<Models.TaskStatus>
+        {
+            Models.TaskStatus.Todo,
+            Models.TaskStatus.InProgress,
+            Models.TaskStatus.Done
+        };
+
+        if (string.IsNullOrWhiteSpace(enabledStatuses))
+        {
+            return defaultStatuses;
+        }
+
+        var parsed = enabledStatuses
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(s => Enum.TryParse<Models.TaskStatus>(s, true, out var value) ? value : (Models.TaskStatus?)null)
+            .Where(v => v.HasValue)
+            .Select(v => v!.Value)
+            .Distinct()
+            .ToList();
+
+        if (!parsed.Contains(Models.TaskStatus.Todo))
+        {
+            parsed.Add(Models.TaskStatus.Todo);
+        }
+        if (!parsed.Contains(Models.TaskStatus.InProgress))
+        {
+            parsed.Add(Models.TaskStatus.InProgress);
+        }
+        if (!parsed.Contains(Models.TaskStatus.Done))
+        {
+            parsed.Add(Models.TaskStatus.Done);
+        }
+
+        var order = new[]
+        {
+            Models.TaskStatus.Refine,
+            Models.TaskStatus.Todo,
+            Models.TaskStatus.InProgress,
+            Models.TaskStatus.Review,
+            Models.TaskStatus.Done
+        };
+
+        return parsed.OrderBy(status => Array.IndexOf(order, status)).ToList();
+    }
+
+    private string GetStatusLabel(Models.TaskStatus status)
+    {
+        return status switch
+        {
+            Models.TaskStatus.Backlog => "Backlog",
+            Models.TaskStatus.InProgress => "In Progress",
+            Models.TaskStatus.Refine => "Refine",
+            Models.TaskStatus.Review => "Review",
+            _ => status.ToString()
+        };
+    }
+
+    private async Task AddComment()
+    {
+        if (InitialTask == null || string.IsNullOrWhiteSpace(NewCommentBody))
+        {
+            return;
+        }
+
+        await CommentDataService.CreateCommentAsync(InitialTask.Id, new CreateTaskCommentRequest
+        {
+            Body = NewCommentBody
+        });
+
+        NewCommentBody = string.Empty;
+        Comments = await CommentDataService.GetCommentsAsync(InitialTask.Id);
     }
 }

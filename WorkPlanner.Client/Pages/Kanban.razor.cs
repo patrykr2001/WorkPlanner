@@ -6,7 +6,7 @@ using TaskStatus = WorkPlanner.Client.Models.TaskStatus;
 
 namespace WorkPlanner.Client.Pages;
 
-public partial class Kanban : ComponentBase
+public partial class Kanban : ComponentBase, IDisposable
 {
     protected const string AssigneeFilterAll = "all";
     protected const string AssigneeFilterMe = "me";
@@ -38,6 +38,7 @@ public partial class Kanban : ComponentBase
 
     protected List<Sprint> Sprints { get; private set; } = new();
     protected List<ProjectMember> Members { get; private set; } = new();
+    protected List<TaskStatus> EnabledStatuses { get; private set; } = new();
     protected string SelectedAssigneeId { get; set; } = AssigneeFilterAll;
     protected int SelectedSprintId
     {
@@ -62,7 +63,7 @@ public partial class Kanban : ComponentBase
     protected override async Task OnInitializedAsync()
     {
         Projects = await ProjectService.GetProjectsAsync();
-        IsUnauthorized = Projects.Count == 0;
+        IsUnauthorized = !AuthService.IsAuthenticated;
 
         var storedProjectId = await JsRuntime.InvokeAsync<string>("localStorage.getItem", SelectedProjectStorageKey);
         if (int.TryParse(storedProjectId, out var projectId) && Projects.Any(p => p.Id == projectId))
@@ -79,6 +80,36 @@ public partial class Kanban : ComponentBase
         {
             await LoadSprintsAsync();
         }
+
+        AuthService.OnAuthStateChanged += HandleAuthChanged;
+    }
+
+    public void Dispose()
+    {
+        AuthService.OnAuthStateChanged -= HandleAuthChanged;
+    }
+
+    private async void HandleAuthChanged()
+    {
+        IsUnauthorized = !AuthService.IsAuthenticated;
+        if (IsUnauthorized)
+        {
+            Projects = new List<Project>();
+            Sprints = new List<Sprint>();
+            Members = new List<ProjectMember>();
+            SprintTasks = new List<TaskItem>();
+            SelectedProjectId = 0;
+            SelectedSprintId = 0;
+            StateHasChanged();
+            return;
+        }
+
+        Projects = await ProjectService.GetProjectsAsync();
+        if (SelectedProjectId == 0 && Projects.Count > 0)
+        {
+            SelectedProjectId = Projects[0].Id;
+        }
+        await LoadSprintsAsync();
     }
 
     private async Task SaveSelectedProjectAsync()
@@ -96,6 +127,17 @@ public partial class Kanban : ComponentBase
     {
         Sprints = await SprintService.GetSprintsAsync(SelectedProjectId, includeArchived: false);
         Members = await ProjectService.GetMembersAsync(SelectedProjectId);
+        var project = Projects.FirstOrDefault(p => p.Id == SelectedProjectId);
+        EnabledStatuses = GetEnabledStatuses(project?.EnabledStatuses);
+        if (EnabledStatuses.Count == 0)
+        {
+            EnabledStatuses = new List<TaskStatus>
+            {
+                TaskStatus.Todo,
+                TaskStatus.InProgress,
+                TaskStatus.Done
+            };
+        }
         SelectedAssigneeId = AssigneeFilterAll;
 
         var activeSprint = Sprints.FirstOrDefault(s => s.IsActive);
@@ -136,7 +178,10 @@ public partial class Kanban : ComponentBase
         }
 
         SprintTasks = await TaskService.GetTasksAsync(SelectedProjectId, SelectedSprintId);
-        IsUnauthorized = Projects.Count == 0 && Sprints.Count == 0 && SprintTasks.Count == 0;
+        SprintTasks = SprintTasks
+            .Where(t => EnabledStatuses.Contains(t.Status))
+            .ToList();
+        IsUnauthorized = !AuthService.IsAuthenticated;
         StateHasChanged();
     }
 
@@ -148,6 +193,57 @@ public partial class Kanban : ComponentBase
             .OrderBy(t => t.Order);
     }
 
+    protected string GetStatusLabel(TaskStatus status)
+    {
+        return status switch
+        {
+            TaskStatus.InProgress => "In Progress",
+            TaskStatus.Refine => "Refine",
+            TaskStatus.Review => "Review",
+            _ => status.ToString()
+        };
+    }
+
+    private static List<TaskStatus> GetEnabledStatuses(string? statuses)
+    {
+        if (string.IsNullOrWhiteSpace(statuses))
+        {
+            return new List<TaskStatus>();
+        }
+
+        var parsed = statuses
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(s => Enum.TryParse<TaskStatus>(s, true, out var value) ? value : (TaskStatus?)null)
+            .Where(v => v.HasValue)
+            .Select(v => v!.Value)
+            .Distinct()
+            .ToList();
+
+        if (!parsed.Contains(TaskStatus.Todo))
+        {
+            parsed.Add(TaskStatus.Todo);
+        }
+        if (!parsed.Contains(TaskStatus.InProgress))
+        {
+            parsed.Add(TaskStatus.InProgress);
+        }
+        if (!parsed.Contains(TaskStatus.Done))
+        {
+            parsed.Add(TaskStatus.Done);
+        }
+
+        var order = new[]
+        {
+            TaskStatus.Refine,
+            TaskStatus.Todo,
+            TaskStatus.InProgress,
+            TaskStatus.Review,
+            TaskStatus.Done
+        };
+
+        return parsed.OrderBy(status => Array.IndexOf(order, status)).ToList();
+    }
+
     private bool ApplyAssigneeFilter(TaskItem task)
     {
         return SelectedAssigneeId switch
@@ -157,6 +253,16 @@ public partial class Kanban : ComponentBase
             AssigneeFilterUnassigned => string.IsNullOrWhiteSpace(task.AssigneeId),
             _ => task.AssigneeId == SelectedAssigneeId
         };
+    }
+
+    protected string GetMemberLabel(ProjectMember member)
+    {
+        if (!string.IsNullOrWhiteSpace(member.FullName))
+        {
+            return member.FullName;
+        }
+
+        return string.IsNullOrWhiteSpace(member.Email) ? member.UserId : member.Email;
     }
 
     protected void OnDragStart(TaskItem task)

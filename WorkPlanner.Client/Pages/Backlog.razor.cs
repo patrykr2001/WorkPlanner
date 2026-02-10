@@ -7,7 +7,7 @@ using TaskStatus = WorkPlanner.Client.Models.TaskStatus;
 
 namespace WorkPlanner.Client.Pages;
 
-public partial class Backlog : ComponentBase
+public partial class Backlog : ComponentBase, IDisposable
 {
     protected const string AssigneeFilterAll = "all";
     protected const string AssigneeFilterMe = "me";
@@ -47,7 +47,7 @@ public partial class Backlog : ComponentBase
     protected override async Task OnInitializedAsync()
     {
         Projects = await ProjectService.GetProjectsAsync();
-        IsUnauthorized = Projects.Count == 0;
+        IsUnauthorized = !AuthService.IsAuthenticated;
 
         var storedProjectId = await JsRuntime.InvokeAsync<string>("localStorage.getItem", SelectedProjectStorageKey);
         if (int.TryParse(storedProjectId, out var projectId) && Projects.Any(p => p.Id == projectId))
@@ -64,6 +64,35 @@ public partial class Backlog : ComponentBase
         {
             await LoadSprintDataAsync();
         }
+
+        AuthService.OnAuthStateChanged += HandleAuthChanged;
+    }
+
+    public void Dispose()
+    {
+        AuthService.OnAuthStateChanged -= HandleAuthChanged;
+    }
+
+    private async void HandleAuthChanged()
+    {
+        IsUnauthorized = !AuthService.IsAuthenticated;
+        if (IsUnauthorized)
+        {
+            Projects = new List<Project>();
+            Sprints = new List<Sprint>();
+            BacklogTasks = new List<TaskItem>();
+            Members = new List<ProjectMember>();
+            SprintTasks = new Dictionary<int, List<TaskItem>>();
+            StateHasChanged();
+            return;
+        }
+
+        Projects = await ProjectService.GetProjectsAsync();
+        if (SelectedProjectId == 0 && Projects.Count > 0)
+        {
+            SelectedProjectId = Projects[0].Id;
+        }
+        await LoadSprintDataAsync();
     }
 
     private async Task SaveSelectedProjectAsync()
@@ -104,11 +133,21 @@ public partial class Backlog : ComponentBase
         };
     }
 
+    protected string GetMemberLabel(ProjectMember member)
+    {
+        if (!string.IsNullOrWhiteSpace(member.FullName))
+        {
+            return member.FullName;
+        }
+
+        return string.IsNullOrWhiteSpace(member.Email) ? member.UserId : member.Email;
+    }
+
     private async Task LoadSprintDataAsync()
     {
         Sprints = await SprintService.GetSprintsAsync(SelectedProjectId, includeArchived: false);
         BacklogTasks = await TaskService.GetTasksAsync(SelectedProjectId, sprintId: null);
-        IsUnauthorized = Projects.Count == 0 && BacklogTasks.Count == 0 && Sprints.Count == 0;
+        IsUnauthorized = !AuthService.IsAuthenticated;
         Members = await ProjectService.GetMembersAsync(SelectedProjectId);
         SelectedAssigneeId = AssigneeFilterAll;
         SprintTasks = new Dictionary<int, List<TaskItem>>();
@@ -116,7 +155,7 @@ public partial class Backlog : ComponentBase
         foreach (var sprint in Sprints)
         {
             var tasks = await TaskService.GetTasksAsync(SelectedProjectId, sprint.Id);
-            SprintTasks[sprint.Id] = tasks;
+            SprintTasks[sprint.Id] = tasks.Where(t => t.Status != TaskStatus.Backlog).ToList();
         }
 
         StateHasChanged();

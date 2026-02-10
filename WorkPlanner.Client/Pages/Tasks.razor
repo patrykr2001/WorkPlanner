@@ -23,10 +23,10 @@
         </MudSelect>
 
         <MudSelect T="WorkPlanner.Client.Models.TaskStatus" Label="Status" Dense="true" @bind-Value="SelectedStatus" @bind-Value:after="OnFiltersChanged">
-            <MudSelectItem T="WorkPlanner.Client.Models.TaskStatus" Value="WorkPlanner.Client.Models.TaskStatus.Backlog">Backlog</MudSelectItem>
-            <MudSelectItem T="WorkPlanner.Client.Models.TaskStatus" Value="WorkPlanner.Client.Models.TaskStatus.Todo">Todo</MudSelectItem>
-            <MudSelectItem T="WorkPlanner.Client.Models.TaskStatus" Value="WorkPlanner.Client.Models.TaskStatus.InProgress">In Progress</MudSelectItem>
-            <MudSelectItem T="WorkPlanner.Client.Models.TaskStatus" Value="WorkPlanner.Client.Models.TaskStatus.Done">Done</MudSelectItem>
+            @foreach (var status in AvailableStatuses)
+            {
+                <MudSelectItem T="WorkPlanner.Client.Models.TaskStatus" Value="status">@GetStatusLabel(status)</MudSelectItem>
+            }
         </MudSelect>
 
         <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OpenNewTaskDialog">New task</MudButton>

@@ -39,7 +39,7 @@
         <MudSelectItem T="string" Value="@AssigneeFilterUnassigned">Unassigned</MudSelectItem>
         @foreach (var member in Members)
         {
-            <MudSelectItem T="string" Value="member.UserId">@member.FullName</MudSelectItem>
+            <MudSelectItem T="string" Value="member.UserId">@GetMemberLabel(member)</MudSelectItem>
         }
     </MudSelect>
 
@@ -57,49 +57,24 @@
             else
             {
                 <MudGrid>
-                    <MudItem xs="12" md="4">
-                        <MudText Typo="Typo.subtitle2">Todo</MudText>
-                        <MudPaper Class="pa-3" Style="min-height: 140px;"
-                                  @ondragover:preventDefault
-                                  @ondrop="(() => OnDropToColumn(WorkPlanner.Client.Models.TaskStatus.Todo))">
-                            @foreach (var task in FilteredColumnTasks(WorkPlanner.Client.Models.TaskStatus.Todo))
-                            {
-                                <div class="pa-2 mb-2" draggable="true"
-                                     @ondragstart="(() => OnDragStart(task))">
-                                    <MudText>@task.Title</MudText>
-                                </div>
-                            }
-                        </MudPaper>
-                    </MudItem>
-                    <MudItem xs="12" md="4">
-                        <MudText Typo="Typo.subtitle2">In Progress</MudText>
-                        <MudPaper Class="pa-3" Style="min-height: 140px;"
-                                  @ondragover:preventDefault
-                                  @ondrop="(() => OnDropToColumn(WorkPlanner.Client.Models.TaskStatus.InProgress))">
-                            @foreach (var task in FilteredColumnTasks(WorkPlanner.Client.Models.TaskStatus.InProgress))
-                            {
-                                <div class="pa-2 mb-2" draggable="true"
-                                     @ondragstart="(() => OnDragStart(task))">
-                                    <MudText>@task.Title</MudText>
-                                </div>
-                            }
-                        </MudPaper>
-                    </MudItem>
-                    <MudItem xs="12" md="4">
-                        <MudText Typo="Typo.subtitle2">Done</MudText>
-                        <MudPaper Class="pa-3" Style="min-height: 140px;"
-                                  @ondragover:preventDefault
-                                  @ondrop="(() => OnDropToColumn(WorkPlanner.Client.Models.TaskStatus.Done))">
-                            @foreach (var task in FilteredColumnTasks(WorkPlanner.Client.Models.TaskStatus.Done))
-                            {
-                                <div class="pa-2 mb-2" draggable="true"
-                                     @ondragstart="(() => OnDragStart(task))">
-                                    <MudText>@task.Title</MudText>
-                                </div>
-                            }
-                        </MudPaper>
-                    </MudItem>
-                </MudGrid>
+                        @foreach (var status in EnabledStatuses)
+                        {
+                            <MudItem xs="12" md="6" lg="4" xl="3">
+                                <MudText Typo="Typo.subtitle2">@GetStatusLabel(status)</MudText>
+                                <MudPaper Class="pa-3" Style="min-height: 140px;"
+                                          @ondragover:preventDefault
+                                          @ondrop="(() => OnDropToColumn(status))">
+                                    @foreach (var task in FilteredColumnTasks(status))
+                                    {
+                                        <div class="pa-2 mb-2" draggable="true"
+                                             @ondragstart="(() => OnDragStart(task))">
+                                            <MudText>@task.Title</MudText>
+                                        </div>
+                                    }
+                                </MudPaper>
+                            </MudItem>
+                        }
+                    </MudGrid>
             }
         </MudPaper>
     </MudStack>

@@ -3,6 +3,7 @@
 @inject AuthService AuthService
 @inject IDialogService DialogService
 @inject NavigationManager NavigationManager
+@using System.Reflection
 
 <MudThemeProvider @ref="_themeProvider" @bind-IsDarkMode="_isDarkMode" Theme="_theme" />
 <MudDialogProvider />
@@ -60,13 +61,19 @@
     <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
             <MudNavMenu>
                 <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
-                <MudNavLink Href="tasks" Icon="@Icons.Material.Filled.Task">Tasks</MudNavLink>
-                <MudNavLink Href="projects" Icon="@Icons.Material.Filled.Folder">Projects</MudNavLink>
-                <MudNavLink Href="backlog" Icon="@Icons.Material.Filled.Inbox">Backlog</MudNavLink>
-                <MudNavLink Href="kanban" Icon="@Icons.Material.Filled.ViewKanban">Kanban</MudNavLink>
+                @if (AuthService.IsAuthenticated)
+                {
+                    <MudNavLink Href="tasks" Icon="@Icons.Material.Filled.Task">Tasks</MudNavLink>
+                    <MudNavLink Href="projects" Icon="@Icons.Material.Filled.Folder">Projects</MudNavLink>
+                    <MudNavLink Href="backlog" Icon="@Icons.Material.Filled.Inbox">Backlog</MudNavLink>
+                    <MudNavLink Href="kanban" Icon="@Icons.Material.Filled.ViewKanban">Kanban</MudNavLink>
+                    <MudNavLink Href="reports" Icon="@Icons.Material.Filled.Assessment">Reports</MudNavLink>
+                }
                 <MudNavLink Href="timer" Icon="@Icons.Material.Filled.Timer">Timer</MudNavLink>
-                <MudNavLink Href="reports" Icon="@Icons.Material.Filled.Assessment">Reports</MudNavLink>
             </MudNavMenu>
+            <MudSpacer />
+            <MudDivider />
+            <MudText Typo="Typo.caption" Class="pa-4">Version @AppVersion</MudText>
     </MudDrawer>
     
     <MudMainContent>
@@ -80,6 +87,9 @@
     private bool _drawerOpen = true;
     private bool _isDarkMode;
     private MudThemeProvider _themeProvider = null!;
+    private string AppVersion => Assembly.GetExecutingAssembly()
+        .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+        ?? "0.0.0";
 
     private readonly MudTheme _theme = new()
     {

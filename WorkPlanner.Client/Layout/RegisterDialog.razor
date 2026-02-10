@@ -44,7 +44,7 @@
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" OnClick="Submit" Disabled="!_isValid">Register</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit" Disabled="_isSubmitting">Register</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -54,6 +54,7 @@
 
     private MudForm _form = null!;
     private bool _isValid;
+    private bool _isSubmitting;
     private string _firstName = "";
     private string _lastName = "";
     private string _email = "";
@@ -62,6 +63,17 @@
 
     private async Task Submit()
     {
+        if (_isSubmitting)
+        {
+            return;
+        }
+
+        await _form.Validate();
+        if (!_isValid)
+        {
+            return;
+        }
+
         // Validate password manually
         if (_password.Length < 8)
         {
@@ -98,7 +110,9 @@
             ConfirmPassword = _confirmPassword
         };
 
+        _isSubmitting = true;
         var success = await AuthService.RegisterAsync(model);
+        _isSubmitting = false;
         
         if (success)
         {

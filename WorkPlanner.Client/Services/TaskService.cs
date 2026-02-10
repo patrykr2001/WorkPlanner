@@ -40,14 +40,31 @@ public class TaskService
 
     public async Task<TaskItem> CreateTaskAsync(TaskItem task)
     {
-        var response = await _httpClient.PostAsJsonAsync("api/tasks", task);
+        var response = await _httpClient.PostAsJsonAsync("api/tasks", new CreateTaskRequest
+        {
+            ProjectId = task.ProjectId,
+            Title = task.Title,
+            Description = task.Description,
+            Status = task.Status,
+            AssigneeId = task.AssigneeId,
+            SprintId = task.SprintId,
+            Order = task.Order
+        });
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<TaskItem>() ?? task;
     }
 
     public async Task UpdateTaskAsync(TaskItem task)
     {
-        var response = await _httpClient.PutAsJsonAsync($"api/tasks/{task.Id}", task);
+        var response = await _httpClient.PutAsJsonAsync($"api/tasks/{task.Id}", new UpdateTaskRequest
+        {
+            Title = task.Title,
+            Description = task.Description,
+            Status = task.Status,
+            AssigneeId = task.AssigneeId,
+            SprintId = task.SprintId,
+            Order = task.Order
+        });
         response.EnsureSuccessStatusCode();
     }
 
