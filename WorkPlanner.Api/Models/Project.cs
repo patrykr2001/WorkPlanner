@@ -7,6 +7,7 @@ public class Project
     public string OwnerId { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public bool IsArchived { get; set; }
+    public string EnabledStatuses { get; set; } = string.Empty;
 
     public ApplicationUser Owner { get; set; } = null!;
     public ICollection<ProjectMember> Members { get; set; } = new List<ProjectMember>();

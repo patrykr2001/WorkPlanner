@@ -15,6 +15,7 @@ public class TaskItem
     public string? AssigneeId { get; set; }
     
     public ICollection<WorkEntry> WorkEntries { get; set; } = new List<WorkEntry>();
+    public ICollection<TaskComment> Comments { get; set; } = new List<TaskComment>();
     public Project? Project { get; set; }
     public Sprint? Sprint { get; set; }
     public ApplicationUser? Assignee { get; set; }
@@ -22,8 +23,10 @@ public class TaskItem
 
 public enum TaskStatus
 {
-    Backlog,
-    Todo,
-    InProgress,
-    Done
+    Backlog = 0,
+    Todo = 1,
+    InProgress = 2,
+    Done = 3,
+    Review = 4,
+    Refine = 5
 }

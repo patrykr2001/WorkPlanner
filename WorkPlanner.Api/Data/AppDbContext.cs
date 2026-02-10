@@ -15,6 +15,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<ProjectMember> ProjectMembers => Set<ProjectMember>();
     public DbSet<Sprint> Sprints => Set<Sprint>();
+    public DbSet<TaskComment> TaskComments => Set<TaskComment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -57,6 +58,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.EnabledStatuses).HasMaxLength(4000);
             entity.HasOne(e => e.Owner)
                   .WithMany()
                   .HasForeignKey(e => e.OwnerId)
@@ -84,6 +86,20 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
             entity.HasOne(e => e.TaskItem)
                   .WithMany(t => t.WorkEntries)
                   .HasForeignKey(e => e.TaskItemId);
+        });
+
+        modelBuilder.Entity<TaskComment>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Body).IsRequired().HasMaxLength(4000);
+            entity.HasOne(e => e.TaskItem)
+                  .WithMany(t => t.Comments)
+                  .HasForeignKey(e => e.TaskItemId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Author)
+                  .WithMany()
+                  .HasForeignKey(e => e.AuthorId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

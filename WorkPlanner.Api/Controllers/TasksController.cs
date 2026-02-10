@@ -127,6 +127,17 @@ public class TasksController : ControllerBase
             return Forbid();
         }
 
+        var enabledStatuses = await _context.Projects
+            .AsNoTracking()
+            .Where(p => p.Id == request.ProjectId)
+            .Select(p => p.EnabledStatuses)
+            .FirstOrDefaultAsync() ?? "Todo,InProgress,Done";
+
+        if (!IsStatusAllowed(request.Status, enabledStatuses, request.SprintId))
+        {
+            return BadRequest("Status is not allowed for this project.");
+        }
+
         if (!string.IsNullOrWhiteSpace(request.AssigneeId))
         {
             var assigneeHasAccess = await _context.ProjectMembers
@@ -242,6 +253,17 @@ public class TasksController : ControllerBase
             return Forbid();
         }
 
+        var enabledStatuses = await _context.Projects
+            .AsNoTracking()
+            .Where(p => p.Id == task.ProjectId.Value)
+            .Select(p => p.EnabledStatuses)
+            .FirstOrDefaultAsync() ?? "Todo,InProgress,Done";
+
+        if (!IsStatusAllowed(request.Status, enabledStatuses, request.SprintId))
+        {
+            return BadRequest("Status is not allowed for this project.");
+        }
+
         if (!string.IsNullOrWhiteSpace(request.AssigneeId))
         {
             var assigneeHasAccess = await _context.ProjectMembers
@@ -352,6 +374,23 @@ public class TasksController : ControllerBase
     private bool TaskExists(int id)
     {
         return _context.TaskItems.Any(e => e.Id == id);
+    }
+
+    private static bool IsStatusAllowed(TaskStatus status, string enabledStatuses, int? sprintId)
+    {
+        if (status == TaskStatus.Backlog)
+        {
+            return sprintId == null;
+        }
+
+        var allowed = enabledStatuses
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(s => Enum.TryParse<TaskStatus>(s, true, out var value) ? value : (TaskStatus?)null)
+            .Where(v => v.HasValue)
+            .Select(v => v!.Value)
+            .ToHashSet();
+
+        return allowed.Contains(status);
     }
 
     private string? GetUserId()

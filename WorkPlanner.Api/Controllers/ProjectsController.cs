@@ -31,19 +31,20 @@ public class ProjectsController : ControllerBase
             return Unauthorized();
         }
 
-        var projects = await _context.Projects
-            .AsNoTracking()
-            .Where(p => p.Members.Any(m => m.UserId == userId))
-            .OrderBy(p => p.Name)
-            .Select(p => new ProjectDto
-            {
-                Id = p.Id,
-                Name = p.Name,
-                OwnerId = p.OwnerId,
-                CreatedAt = p.CreatedAt,
-                IsArchived = p.IsArchived
-            })
-            .ToListAsync();
+            var projects = await _context.Projects
+                .AsNoTracking()
+                .Where(p => p.Members.Any(m => m.UserId == userId))
+                .OrderBy(p => p.Name)
+                .Select(p => new ProjectDto
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    OwnerId = p.OwnerId,
+                    CreatedAt = p.CreatedAt,
+                    IsArchived = p.IsArchived,
+                    EnabledStatuses = p.EnabledStatuses
+                })
+                .ToListAsync();
 
         return projects;
     }
@@ -57,18 +58,19 @@ public class ProjectsController : ControllerBase
             return Unauthorized();
         }
 
-        var project = await _context.Projects
-            .AsNoTracking()
-            .Where(p => p.Id == id && p.Members.Any(m => m.UserId == userId))
-            .Select(p => new ProjectDto
-            {
-                Id = p.Id,
-                Name = p.Name,
-                OwnerId = p.OwnerId,
-                CreatedAt = p.CreatedAt,
-                IsArchived = p.IsArchived
-            })
-            .FirstOrDefaultAsync();
+            var project = await _context.Projects
+                .AsNoTracking()
+                .Where(p => p.Id == id && p.Members.Any(m => m.UserId == userId))
+                .Select(p => new ProjectDto
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    OwnerId = p.OwnerId,
+                    CreatedAt = p.CreatedAt,
+                    IsArchived = p.IsArchived,
+                    EnabledStatuses = p.EnabledStatuses
+                })
+                .FirstOrDefaultAsync();
 
         if (project == null)
         {
@@ -96,7 +98,10 @@ public class ProjectsController : ControllerBase
         {
             Name = request.Name.Trim(),
             OwnerId = userId,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            EnabledStatuses = string.IsNullOrWhiteSpace(request.EnabledStatuses)
+                ? "Todo,InProgress,Done"
+                : request.EnabledStatuses.Trim()
         };
 
         var ownerMember = new ProjectMember
@@ -117,7 +122,8 @@ public class ProjectsController : ControllerBase
             Name = project.Name,
             OwnerId = project.OwnerId,
             CreatedAt = project.CreatedAt,
-            IsArchived = project.IsArchived
+            IsArchived = project.IsArchived,
+            EnabledStatuses = project.EnabledStatuses
         };
 
         return CreatedAtAction(nameof(GetProject), new { id = project.Id }, dto);
@@ -240,6 +246,9 @@ public class ProjectsController : ControllerBase
 
         project.Name = request.Name.Trim();
         project.IsArchived = request.IsArchived;
+        project.EnabledStatuses = string.IsNullOrWhiteSpace(request.EnabledStatuses)
+            ? project.EnabledStatuses
+            : request.EnabledStatuses.Trim();
 
         await _context.SaveChangesAsync();
         return NoContent();
@@ -294,6 +303,7 @@ public class ProjectsController : ControllerBase
 public class CreateProjectRequest
 {
     public string Name { get; set; } = string.Empty;
+    public string? EnabledStatuses { get; set; }
 }
 
 public class AddProjectMemberRequest
@@ -305,6 +315,7 @@ public class UpdateProjectRequest
 {
     public string Name { get; set; } = string.Empty;
     public bool IsArchived { get; set; }
+    public string? EnabledStatuses { get; set; }
 }
 
 public class ProjectMemberDto
@@ -323,4 +334,5 @@ public class ProjectDto
     public string OwnerId { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public bool IsArchived { get; set; }
+    public string? EnabledStatuses { get; set; }
 }
