@@ -40,6 +40,9 @@ public class ProjectsController : ControllerBase
                     Id = p.Id,
                     Name = p.Name,
                     OwnerId = p.OwnerId,
+                    OwnerFirstName = p.Owner.FirstName,
+                    OwnerLastName = p.Owner.LastName,
+                    OwnerEmail = p.Owner.Email ?? string.Empty,
                     CreatedAt = p.CreatedAt,
                     IsArchived = p.IsArchived,
                     EnabledStatuses = p.EnabledStatuses
@@ -66,6 +69,9 @@ public class ProjectsController : ControllerBase
                     Id = p.Id,
                     Name = p.Name,
                     OwnerId = p.OwnerId,
+                    OwnerFirstName = p.Owner.FirstName,
+                    OwnerLastName = p.Owner.LastName,
+                    OwnerEmail = p.Owner.Email ?? string.Empty,
                     CreatedAt = p.CreatedAt,
                     IsArchived = p.IsArchived,
                     EnabledStatuses = p.EnabledStatuses
@@ -116,11 +122,15 @@ public class ProjectsController : ControllerBase
         _context.ProjectMembers.Add(ownerMember);
         await _context.SaveChangesAsync();
 
+        var owner = await _userManager.FindByIdAsync(project.OwnerId);
         var dto = new ProjectDto
         {
             Id = project.Id,
             Name = project.Name,
             OwnerId = project.OwnerId,
+            OwnerFirstName = owner?.FirstName ?? string.Empty,
+            OwnerLastName = owner?.LastName ?? string.Empty,
+            OwnerEmail = owner?.Email ?? string.Empty,
             CreatedAt = project.CreatedAt,
             IsArchived = project.IsArchived,
             EnabledStatuses = project.EnabledStatuses
@@ -332,6 +342,9 @@ public class ProjectDto
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string OwnerId { get; set; } = string.Empty;
+    public string OwnerFirstName { get; set; } = string.Empty;
+    public string OwnerLastName { get; set; } = string.Empty;
+    public string OwnerEmail { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public bool IsArchived { get; set; }
     public string? EnabledStatuses { get; set; }
